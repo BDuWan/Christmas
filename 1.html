@@ -117,6 +117,155 @@
             z-index: 999;
             padding: 10px;
         }
+
+        #close-button {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 0, 0, 0.9);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 200;
+            text-align: center;
+            line-height: 44px;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+
+        #close-button:hover {
+            background: rgba(255, 0, 0, 1);
+            transform: scale(1.1);
+        }
+
+        /* Modal nhập lời chúc */
+        #wish-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #wish-modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 30px;
+            border-radius: 20px;
+            border: 3px solid #FFD700;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+        }
+
+        #wish-modal h2 {
+            color: #FFD700;
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        #wish-modal input,
+        #wish-modal textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Dancing Script', cursive;
+        }
+
+        #wish-modal input::placeholder,
+        #wish-modal textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #wish-modal textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        #wish-modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        #wish-modal button {
+            padding: 10px 25px;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #wish-modal-save {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        #wish-modal-cancel {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        /* Nút nhập lời chúc khi bung cây */
+        #btn-add-wish {
+            display: none;
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background: linear-gradient(to bottom, #2e7d32, #1b5e20);
+            color: #fff;
+            border: 2px solid #FFD700;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 150;
+            box-shadow: 0 0 20px rgba(46, 125, 50, 0.6);
+            pointer-events: auto;
+        }
+
+        #btn-add-wish:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        /* Responsive cho mobile */
+        @media screen and (max-width: 768px) {
+            #wish-modal-content {
+                padding: 20px;
+                max-width: 90%;
+            }
+
+            #wish-modal h2 {
+                font-size: 20px;
+            }
+
+            #btn-add-wish {
+                bottom: 80px;
+                padding: 12px 25px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 
@@ -124,16 +273,26 @@
     <div id="error-log"></div>
     <div id="ui-layer">
         <div id="status" class="badge">🎄 Merry Christmas 🎄</div>
-        <div class="guide">
-            🖐 <b>Xòe:</b> Bung Quà & Đèn &nbsp;|&nbsp; 👌 <b>Pinch:</b> Xem ảnh &nbsp;|&nbsp; ✊ <b>Nắm:</b> Thu cây
-            &nbsp;|&nbsp; 🤲<b>2 Tay Cong:</b> Trái Tim
-        </div>
-        <button id="btnStart" onclick="startSystem()">Start</button>
     </div>
 
     <div id="canvas-container"></div>
     <video class="input_video" style="display:none"></video>
     <canvas id="camera-preview"></canvas>
+    <button id="close-button" onclick="closePhotoDetail()">✕</button>
+    <button id="btn-add-wish" onclick="openWishModal()">✍️ Thêm Lời Chúc</button>
+
+    <!-- Modal nhập lời chúc -->
+    <div id="wish-modal">
+        <div id="wish-modal-content">
+            <h2>✍️ Thêm Lời Chúc Mới</h2>
+            <input type="text" id="modal-sender" placeholder="Tên người gửi..." />
+            <textarea id="modal-content" placeholder="Nội dung lời chúc..."></textarea>
+            <div id="wish-modal-buttons">
+                <button id="wish-modal-cancel" onclick="closeWishModal()">Hủy</button>
+                <button id="wish-modal-save" onclick="saveWish()">Lưu</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ==========================================
@@ -213,10 +372,256 @@
             playNextSong();
         });
 
-        const loader = new THREE.TextureLoader();
-        const photoFiles = ['./img/a1.jpg', './img/a2.jpg', './img/a3.jpg', './img/a4.jpg']; //Thay hoặc thêm số ảnh dòng 319 sửa ở đây và folder img
-        const photoTextures = [];
-        photoFiles.forEach((f, i) => photoTextures[i] = loader.load(f));
+        // ==========================================
+        // LOAD LỜI CHÚC TỪ JSON
+        // ==========================================
+        const API_BASE_URL = 'http://localhost:8080/api';
+        let wishesData = [];
+        let photoTextures = [];
+        let photoMeshes = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let mouseX = 0.5;
+        let treeRotationSpeed = 1.0;
+
+        // Đợi font load xong
+        function waitForFonts() {
+            return new Promise((resolve) => {
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(() => {
+                        setTimeout(resolve, 100);
+                    });
+                } else {
+                    setTimeout(resolve, 500);
+                }
+            });
+        }
+
+        // Gọi API để lấy lời chúc
+        async function fetchWishes() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/wishes`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Kiểm tra response có dữ liệu không
+                const text = await response.text();
+                if (!text || text.trim() === '') {
+                    console.warn('Response rỗng, trả về mảng rỗng');
+                    return [];
+                }
+                
+                // Parse JSON
+                try {
+                    const data = JSON.parse(text);
+                    return Array.isArray(data) ? data : [];
+                } catch (parseError) {
+                    console.error('Lỗi parse JSON:', parseError, 'Response text:', text);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Lỗi khi gọi API:', error);
+                return [];
+            }
+        }
+
+        // Gọi API để thêm lời chúc mới
+        async function addWishToAPI(sender, content) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/wishes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sender, content })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                }
+                
+                // Kiểm tra response có dữ liệu không
+                const text = await response.text();
+                if (!text || text.trim() === '') {
+                    throw new Error('Response rỗng từ server');
+                }
+                
+                // Parse JSON
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    console.error('Lỗi parse JSON response:', parseError, 'Response text:', text);
+                    throw new Error('Lỗi parse JSON từ server');
+                }
+            } catch (error) {
+                console.error('Lỗi khi thêm lời chúc:', error);
+                throw error;
+            }
+        }
+
+        // Tạo texture từ lời chúc với font viết tay
+        function createWishTexture(sender, content) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+            
+            // Nền với gradient đẹp
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(0.5, '#16213e');
+            gradient.addColorStop(1, '#0f3460');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1024, 1024);
+            
+            // Viền vàng
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(20, 20, 984, 984);
+            
+            // Viền trong
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(30, 30, 964, 964);
+            
+            // Tên người gửi - font viết tay lớn
+            ctx.font = 'bold 80px "Dancing Script", "Caveat", cursive';
+            ctx.fillStyle = '#FFD700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+            ctx.shadowBlur = 15;
+            
+            const senderY = 150;
+            ctx.fillText(sender, 512, senderY);
+            
+            // Đường kẻ trang trí
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(150, senderY + 100);
+            ctx.lineTo(512 - 50, senderY + 100);
+            ctx.moveTo(512 + 50, senderY + 100);
+            ctx.lineTo(874, senderY + 100);
+            ctx.stroke();
+            
+            // Nội dung lời chúc - font viết tay
+            ctx.font = '500 60px "Dancing Script", "Caveat", cursive';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+            ctx.shadowBlur = 10;
+            
+            // Xử lý xuống dòng cho nội dung dài
+            const maxWidth = 900;
+            const lineHeight = 90;
+            const words = content.split(' ');
+            let line = '';
+            let y = senderY + 180;
+            
+            words.forEach((word) => {
+                const testLine = line + word + ' ';
+                const metrics = ctx.measureText(testLine);
+                const testWidth = metrics.width;
+                
+                if (testWidth > maxWidth && line.length > 0) {
+                    ctx.fillText(line.trim(), 512, y);
+                    line = word + ' ';
+                    y += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            });
+            ctx.fillText(line.trim(), 512, y);
+            
+            // Trang trí góc
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            const cornerSize = 40;
+            // Góc trên trái
+            ctx.beginPath();
+            ctx.moveTo(60, 60);
+            ctx.lineTo(60 + cornerSize, 60);
+            ctx.moveTo(60, 60);
+            ctx.lineTo(60, 60 + cornerSize);
+            ctx.stroke();
+            // Góc trên phải
+            ctx.beginPath();
+            ctx.moveTo(964, 60);
+            ctx.lineTo(964 - cornerSize, 60);
+            ctx.moveTo(964, 60);
+            ctx.lineTo(964, 60 + cornerSize);
+            ctx.stroke();
+            // Góc dưới trái
+            ctx.beginPath();
+            ctx.moveTo(60, 964);
+            ctx.lineTo(60 + cornerSize, 964);
+            ctx.moveTo(60, 964);
+            ctx.lineTo(60, 964 - cornerSize);
+            ctx.stroke();
+            // Góc dưới phải
+            ctx.beginPath();
+            ctx.moveTo(964, 964);
+            ctx.lineTo(964 - cornerSize, 964);
+            ctx.moveTo(964, 964);
+            ctx.lineTo(964, 964 - cornerSize);
+            ctx.stroke();
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        async function loadWishes() {
+            try {
+                console.log('Đang load lời chúc từ API...');
+                wishesData = await fetchWishes();
+                
+                // Nếu không có dữ liệu từ API, thử load từ file JSON trực tiếp (fallback)
+                if (!Array.isArray(wishesData) || wishesData.length === 0) {
+                    console.warn('Không có lời chúc từ API, thử load từ file JSON...');
+                    try {
+                        const response = await fetch('./music/data.json');
+                        if (response.ok) {
+                            const text = await response.text();
+                            if (text && text.trim()) {
+                                wishesData = JSON.parse(text);
+                            }
+                        }
+                    } catch (fileError) {
+                        console.warn('Không load được từ file JSON:', fileError);
+                    }
+                }
+                
+                if (!Array.isArray(wishesData) || wishesData.length === 0) {
+                    console.warn('Không có lời chúc nào, sử dụng dữ liệu mặc định');
+                    wishesData = [
+                        { id: 1, sender: "Người gửi", content: "Chúc mừng Giáng Sinh! 🎄" }
+                    ];
+                }
+                
+                await waitForFonts();
+                
+                // Tạo texture từ lời chúc
+                photoTextures = [];
+                for (let i = 0; i < wishesData.length; i++) {
+                    const wish = wishesData[i];
+                    if (wish && wish.sender && wish.content) {
+                        const texture = createWishTexture(wish.sender, wish.content);
+                        photoTextures.push(texture);
+                    }
+                }
+                
+                console.log('Đã tạo', photoTextures.length, 'texture thành công');
+            } catch (error) {
+                console.error('Lỗi khi load lời chúc:', error);
+                // Fallback: dữ liệu mặc định
+                wishesData = [
+                    { id: 1, sender: "Người gửi", content: "Chúc mừng Giáng Sinh! 🎄" }
+                ];
+                await waitForFonts();
+                photoTextures = [createWishTexture(wishesData[0].sender, wishesData[0].content)];
+            }
+        }
 
         function createCustomTexture(type) {
             const canvas = document.createElement('canvas');
@@ -272,7 +677,6 @@
 
         let scene, camera, renderer;
         let groupGold, groupRed, groupGift; 
-        let photoMeshes = [];
         let titleMesh, starMesh;
 
         let state = 'TREE';
@@ -379,7 +783,11 @@
             const borderGeo = new THREE.PlaneGeometry(9, 9);
             const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
 
-            for (let i = 0; i < 7; i++) { //số ảnh hiển thị 4
+            // Tạo mesh từ lời chúc (photoTextures đã được load từ JSON)
+            const wishCount = photoTextures.length;
+            for (let i = 0; i < wishCount; i++) {
+                if (!photoTextures[i]) continue;
+                
                 const mat = new THREE.MeshBasicMaterial({
                     map: photoTextures[i], side: THREE.DoubleSide
                 });
@@ -479,7 +887,8 @@
 
             
             if (targetState === 'TREE') {
-                group.rotation.y += 0.003;
+                // Tốc độ quay phụ thuộc vào treeRotationSpeed
+                group.rotation.y += 0.003 * treeRotationSpeed;
                 
                 if (isBlinking) {
                     
@@ -546,8 +955,13 @@
             } else if (state === 'EXPLODE') {
                 titleMesh.visible = false; starMesh.visible = false;
 
-                const baseAngle = groupGold.rotation.y;
-                const angleStep = (Math.PI * 2) / 5;
+                // Hiện nút thêm lời chúc
+                document.getElementById('btn-add-wish').style.display = 'block';
+
+                // Sử dụng mouseX để điều khiển góc quay của lời chúc
+                const baseAngle = (mouseX - 0.5) * Math.PI * 2;
+                const wishCount = photoMeshes.length;
+                const angleStep = (Math.PI * 2) / wishCount;
                 let bestIdx = 0; let maxZ = -999;
 
                 photoMeshes.forEach((mesh, i) => {
@@ -572,29 +986,51 @@
                 selectedIndex = bestIdx;
 
             } else if (state === 'PHOTO') {
+                // Ẩn nút thêm lời chúc khi xem chi tiết
+                document.getElementById('btn-add-wish').style.display = 'none';
+                
                 photoMeshes.forEach((mesh, i) => {
                     if (i === selectedIndex) {
                         mesh.position.lerp(new THREE.Vector3(0, 0, 60), 0.1);
                         mesh.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
                         mesh.lookAt(camera.position);
                         mesh.rotation.z = 0;
+                        mesh.visible = true;
                     } else {
                         mesh.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+                        mesh.visible = false;
                     }
                 });
+                // Hiện nút X
+                document.getElementById('close-button').style.display = 'block';
+            } else {
+                // Ẩn nút X và nút thêm lời chúc khi không ở EXPLODE hoặc PHOTO
+                document.getElementById('close-button').style.display = 'none';
+                if (state !== 'EXPLODE') {
+                    document.getElementById('btn-add-wish').style.display = 'none';
+                }
             }
 
             renderer.render(scene, camera);
         }
 
-        function startSystem() {
-            document.getElementById('btnStart').style.display = 'none';
+        async function startSystem() {
+            // Load lời chúc trước khi khởi tạo 3D
+            await loadWishes();
+            
             initMusic();
             if (bgMusic) {
-                bgMusic.play().catch(e => console.log(e));
+            bgMusic.play().catch(e => console.log(e));
             }
             init3D();
 
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "🎄 Giang Sinh An Lanh 🎄";
+            statusDiv.style.color = "#FFF";
+
+            /* ==========================================
+               PHẦN ĐIỀU KHIỂN BẰNG CỬ ĐỘNG TAY - ĐÃ TẮT
+               ==========================================
             const video = document.getElementsByClassName('input_video')[0];
             const canvas = document.getElementById('camera-preview');
             const ctx = canvas.getContext('2d');
@@ -672,12 +1108,206 @@
                 }, width: 320, height: 240
             });
             cameraUtils.start();
+            ========================================== 
+            */
+        }
+
+        // Xử lý double click để mở/đóng cây thông
+        let lastTapTime = 0;
+        let tapTimeout;
+        
+        function handleDoubleTap() {
+            if (state === 'TREE') {
+                state = 'EXPLODE';
+                treeRotationSpeed = 1.0;
+            } else if (state === 'EXPLODE') {
+                state = 'TREE';
+                treeRotationSpeed = 1.0;
+            }
+        }
+        
+        document.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            handleDoubleTap();
+        });
+        
+        // Hỗ trợ double tap trên mobile
+        let touchStartTime = 0;
+        let touchStartPos = { x: 0, y: 0 };
+        let touchMoved = false;
+        let lastTapPos = { x: 0, y: 0 };
+        
+        window.addEventListener('touchstart', (e) => {
+            touchStartTime = Date.now();
+            touchMoved = false;
+            if (e.touches.length > 0) {
+                touchStartPos.x = e.touches[0].clientX;
+                touchStartPos.y = e.touches[0].clientY;
+            }
+        }, { passive: true });
+        
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const dx = Math.abs(e.touches[0].clientX - touchStartPos.x);
+                const dy = Math.abs(e.touches[0].clientY - touchStartPos.y);
+                if (dx > 10 || dy > 10) {
+                    touchMoved = true;
+                }
+            }
+        }, { passive: true });
+        
+        window.addEventListener('touchend', (e) => {
+            const touchDuration = Date.now() - touchStartTime;
+            
+            if (touchDuration < 500 && !touchMoved && e.changedTouches.length > 0) {
+                const currentTime = Date.now();
+                const currentX = e.changedTouches[0].clientX;
+                const currentY = e.changedTouches[0].clientY;
+                
+                const timeDiff = currentTime - lastTapTime;
+                const distDiff = Math.hypot(currentX - lastTapPos.x, currentY - lastTapPos.y);
+                
+                if (timeDiff < 300 && timeDiff > 0 && distDiff < 50) {
+                    // Double tap detected
+                    e.preventDefault();
+                    clearTimeout(tapTimeout);
+                    handleDoubleTap();
+                    lastTapTime = 0;
+                } else {
+                    lastTapTime = currentTime;
+                    lastTapPos.x = currentX;
+                    lastTapPos.y = currentY;
+                    
+                    tapTimeout = setTimeout(() => {
+                        // Single tap - xử lý click
+                        e.preventDefault();
+                        onPointerClick(e);
+                    }, 300);
+                }
+            }
+        });
+
+        // Xử lý di chuột/touch để xoay lời chúc khi cây mở
+        function onPointerMove(e) {
+            if (state === 'EXPLODE') {
+                const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+                if (clientX) {
+                    mouseX = clientX / window.innerWidth;
+                }
+            }
+        }
+        
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('touchmove', onPointerMove, { passive: true });
+        
+        // Xử lý click/touch để xem chi tiết lời chúc
+        function onPointerClick(event) {
+            if (state !== 'EXPLODE') return;
+            
+            let clientX, clientY;
+            
+            if (event.touches && event.touches.length > 0) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else if (event.changedTouches && event.changedTouches.length > 0) {
+                clientX = event.changedTouches[0].clientX;
+                clientY = event.changedTouches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            
+            if (!clientX && !clientY) return;
+            
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(photoMeshes, true);
+            
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                const meshIndex = photoMeshes.indexOf(clickedMesh);
+                
+                if (meshIndex !== -1) {
+                    selectedIndex = meshIndex;
+                    state = 'PHOTO';
+                    console.log('Xem chi tiết lời chúc:', wishesData[selectedIndex]);
+                }
+            }
+        }
+        
+        window.addEventListener('click', onPointerClick);
+
+        // Hàm đóng chi tiết và quay lại danh sách
+        function closePhotoDetail() {
+            if (state === 'PHOTO') {
+                state = 'EXPLODE';
+                document.getElementById('close-button').style.display = 'none';
+            }
+        }
+
+        // Modal functions
+        function openWishModal() {
+            document.getElementById('wish-modal').style.display = 'flex';
+            document.getElementById('modal-sender').value = '';
+            document.getElementById('modal-content').value = '';
+        }
+
+        function closeWishModal() {
+            document.getElementById('wish-modal').style.display = 'none';
+        }
+
+        async function saveWish() {
+            const sender = document.getElementById('modal-sender').value.trim();
+            const content = document.getElementById('modal-content').value.trim();
+
+            if (!sender || !content) {
+                alert('Vui lòng nhập đầy đủ tên và nội dung lời chúc!');
+                return;
+            }
+
+            try {
+                const newWish = await addWishToAPI(sender, content);
+                
+                // Thêm vào danh sách local
+                wishesData.push(newWish);
+
+                // Tạo texture mới
+                await waitForFonts();
+                const newTexture = createWishTexture(newWish.sender, newWish.content);
+                photoTextures.push(newTexture);
+
+                // Tạo mesh mới
+                const geo = new THREE.PlaneGeometry(8, 8);
+                const borderGeo = new THREE.PlaneGeometry(9, 9);
+                const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                const mat = new THREE.MeshBasicMaterial({ map: newTexture, side: THREE.DoubleSide });
+                const mesh = new THREE.Mesh(geo, mat);
+                const border = new THREE.Mesh(borderGeo, borderMat);
+                border.position.z = -0.1;
+                mesh.add(border);
+                mesh.visible = false;
+                mesh.scale.set(0, 0, 0);
+                scene.add(mesh);
+                photoMeshes.push(mesh);
+
+                closeWishModal();
+                alert('Đã lưu lời chúc thành công!');
+            } catch (error) {
+                alert('Lỗi khi lưu lời chúc: ' + error.message);
+            }
         }
 
         window.addEventListener('resize', () => {
             if (camera) { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
         });
         function logError(e) { document.getElementById('error-log').style.display = 'block'; document.getElementById('error-log').innerText += e + "\n"; }
+        
+        // Tự động start khi trang load
+        window.addEventListener('DOMContentLoaded', () => {
+            startSystem();
+        });
     </script>
 </body>
 
