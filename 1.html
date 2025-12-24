@@ -89,21 +89,42 @@
             top: 12px;
             right: 12px;
 
-            width: 96px;
-            height: 72px;
+            width: 160px;
+            height: 120px;
 
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
 
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
 
             transform: scaleX(-1);
-            opacity: 0.65;
+            opacity: 1;
 
             z-index: 200;
             pointer-events: none;
             background: #000;
+        }
+
+        /* Responsive cho mobile màn hình dọc */
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            #camera-preview {
+                width: 120px;
+                height: 90px;
+                top: 8px;
+                right: 8px;
+                border-width: 1.5px;
+            }
+        }
+
+        /* Responsive cho mobile rất nhỏ */
+        @media screen and (max-width: 480px) and (orientation: portrait) {
+            #camera-preview {
+                width: 100px;
+                height: 75px;
+                top: 6px;
+                right: 6px;
+            }
         }
 
 
@@ -123,11 +144,6 @@
 <body>
     <div id="error-log"></div>
     <div id="ui-layer">
-        <div id="status" class="badge">🎄 Merry Christmas 🎄</div>
-        <div class="guide">
-            🖐 <b>Xòe:</b> Bung Quà & Đèn &nbsp;|&nbsp; 👌 <b>Pinch:</b> Xem ảnh &nbsp;|&nbsp; ✊ <b>Nắm:</b> Thu cây
-            &nbsp;|&nbsp; 🤲<b>2 Tay Cong:</b> Trái Tim
-        </div>
         <button id="btnStart" onclick="startSystem()">Start</button>
     </div>
 
@@ -273,7 +289,9 @@
         let scene, camera, renderer;
         let groupGold, groupRed, groupGift; 
         let photoMeshes = [];
-        let titleMesh, starMesh;
+        let titleMesh, starMesh, testTextMesh;
+        let textPoints = []; // Lưu các điểm từ text
+        let isShowingText = false; // Flag để phân biệt xòe tay vs giơ 3 ngón
 
         let state = 'TREE';
         let selectedIndex = 0;
@@ -281,6 +299,108 @@
         let heartRotation = 0;
 
         
+        // ==========================================
+        // 3. TEXT TO POINTS
+        // ==========================================
+        function generateTextPoints() {
+            const canvas = document.createElement('canvas');
+            const isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+            
+            if (isMobilePortrait) {
+                // Mobile màn hình dọc: 5 dòng
+                canvas.width = 2048;
+                canvas.height = 2048;
+                const ctx = canvas.getContext('2d');
+                
+                // Vẽ nền đen
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Vẽ text màu trắng
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 200px "Arial", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // 5 dòng cho mobile
+                const lineHeight = 350;
+                const startY = canvas.height / 2 - (lineHeight * 2);
+                
+                ctx.fillText('Merry', canvas.width / 2, startY);
+                ctx.fillText('Chrismass', canvas.width / 2, startY + lineHeight);
+                ctx.fillText('Nguyễn', canvas.width / 2, startY + lineHeight * 2);
+                ctx.fillText('Thanh', canvas.width / 2, startY + lineHeight * 3);
+                ctx.fillText('Thư', canvas.width / 2, startY + lineHeight * 4);
+                
+                // Đọc pixel và tạo điểm
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const points = [];
+                const step = 3;
+                
+                for (let y = 0; y < canvas.height; y += step) {
+                    for (let x = 0; x < canvas.width; x += step) {
+                        const index = (y * canvas.width + x) * 4;
+                        const r = imageData.data[index];
+                        const g = imageData.data[index + 1];
+                        const b = imageData.data[index + 2];
+                        
+                        if (r > 0 || g > 0 || b > 0) {
+                            const x3d = (x / canvas.width - 0.5) * 100;
+                            const y3d = (0.5 - y / canvas.height) * 80;
+                            const z3d = 0;
+                            points.push(x3d, y3d, z3d);
+                        }
+                    }
+                }
+                
+                return points;
+            } else {
+                // Desktop: 2 dòng như cũ
+                canvas.width = 3072;
+                canvas.height = 1536;
+                const ctx = canvas.getContext('2d');
+                
+                // Vẽ nền đen
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Vẽ text màu trắng - tăng font size
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 280px "Arial", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Dòng 1: "Marry Christmass"
+                ctx.fillText('Marry Christmass', canvas.width / 2, canvas.height / 2 - 150);
+                
+                // Dòng 2: "Nguyễn Thanh Thư"
+                ctx.fillText('Nguyễn Thanh Thư', canvas.width / 2, canvas.height / 2 + 150);
+                
+                // Đọc pixel và tạo điểm
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const points = [];
+                const step = 3;
+                
+                for (let y = 0; y < canvas.height; y += step) {
+                    for (let x = 0; x < canvas.width; x += step) {
+                        const index = (y * canvas.width + x) * 4;
+                        const r = imageData.data[index];
+                        const g = imageData.data[index + 1];
+                        const b = imageData.data[index + 2];
+                        
+                        if (r > 0 || g > 0 || b > 0) {
+                            const x3d = (x / canvas.width - 0.5) * 120;
+                            const y3d = (0.5 - y / canvas.height) * 60;
+                            const z3d = 0;
+                            points.push(x3d, y3d, z3d);
+                        }
+                    }
+                }
+                
+                return points;
+            }
+        }
+
         // ==========================================
         // 3. THREE.JS SYSTEM
         // ==========================================
@@ -312,6 +432,11 @@
             const pTreeTargets = [];
             const pHeartTargets = [];
 
+            // Tạo text points nếu chưa có
+            if (textPoints.length === 0) {
+                textPoints = generateTextPoints();
+            }
+
             for (let i = 0; i < count; i++) {
                 
                 const h = Math.random() * CONFIG.treeHeight;
@@ -328,16 +453,14 @@
                 const tz = r * Math.sin(theta);
                 pTreeTargets.push(tx, y, tz);
 
-                
+                // Tạo cả 2 loại explode targets: random sphere (mặc định) và text points
+                // Random sphere cho xòe tay
                 const u = Math.random();
                 const v = Math.random();
                 const phi = Math.acos(2 * v - 1);
                 const lam = 2 * Math.PI * u;
-
-                
                 let radMult = (type === 'gift') ? 1.2 : 1.0;
                 const rad = CONFIG.explodeRadius * Math.cbrt(Math.random()) * radMult;
-
                 const ex = rad * Math.sin(phi) * Math.cos(lam);
                 const ey = rad * Math.sin(phi) * Math.sin(lam);
                 const ez = rad * Math.cos(phi);
@@ -355,9 +478,24 @@
                 pPositions.push(tx, y, tz);
             }
 
+            // Tạo text explode targets từ text points
+            const pTextExplodeTargets = [];
+            if (textPoints.length > 0) {
+                for (let i = 0; i < count; i++) {
+                    const pointIndex = Math.floor(Math.random() * (textPoints.length / 3)) * 3;
+                    const ex = textPoints[pointIndex] || 0;
+                    const ey = textPoints[pointIndex + 1] || 0;
+                    const ez = textPoints[pointIndex + 2] || 0;
+                    pTextExplodeTargets.push(ex, ey, ez);
+                }
+            } else {
+                // Fallback: dùng random nếu chưa có text points
+                pTextExplodeTargets.push(...pExplodeTargets);
+            }
+
             const geo = new THREE.BufferGeometry();
             geo.setAttribute('position', new THREE.Float32BufferAttribute(pPositions, 3));
-            geo.userData = { tree: pTreeTargets, explode: pExplodeTargets, heart: pHeartTargets };
+            geo.userData = { tree: pTreeTargets, explode: pExplodeTargets, explodeText: pTextExplodeTargets, heart: pHeartTargets };
 
             const mat = new THREE.PointsMaterial({
                 size: size,
@@ -461,13 +599,48 @@
             starMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), starMat);
             starMesh.position.set(0, CONFIG.treeHeight / 2 + 2, 0);
             scene.add(starMesh);
+
+            // ===============================
+            // TEST TEXT 3D
+            // ===============================
+            const testCanvas = document.createElement('canvas');
+            testCanvas.width = 2048;
+            testCanvas.height = 512;
+            const testCtx = testCanvas.getContext('2d');
+            testCtx.clearRect(0, 0, 2048, 512);
+            testCtx.font = 'bold 180px "Arial", sans-serif';
+            testCtx.textAlign = 'center';
+            testCtx.fillStyle = '#FFD700';
+            testCtx.shadowColor = '#FFA500';
+            testCtx.shadowBlur = 50;
+            testCtx.fillText('Merry Christmass bạn Thư thân mến', 1024, 280);
+
+            const testTex = new THREE.CanvasTexture(testCanvas);
+            const testMat = new THREE.MeshBasicMaterial({
+                map: testTex,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            testTextMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, 15),
+                testMat
+            );
+
+            testTextMesh.position.set(0, 0, 0);
+            testTextMesh.visible = false;
+            scene.add(testTextMesh);
         }
 
         function updateParticleGroup(group, targetState, speed, handRotY, time, isBlinking) {
             const positions = group.geometry.attributes.position.array;
             let targetKey = 'tree';
-            if (targetState === 'EXPLODE') targetKey = 'explode';
-            else if (targetState === 'PHOTO') targetKey = 'explode';
+            if (targetState === 'EXPLODE') {
+                // Nếu đang hiển thị chữ (giơ 3 ngón) thì dùng explodeText, nếu không thì dùng explode (random)
+                targetKey = isShowingText ? 'explodeText' : 'explode';
+            } else if (targetState === 'PHOTO') targetKey = 'explode';
             else if (targetState === 'HEART') targetKey = 'heart';
 
             const targets = group.geometry.userData[targetKey];
@@ -492,6 +665,10 @@
             } else if (targetState === 'HEART') {
                 group.scale.set(1, 1, 1);
                 group.rotation.y = heartRotation;
+            } else if (targetState === 'EXPLODE') {
+                // Xoay 3D dựa trên vị trí tay (handX) khi ở trạng thái EXPLODE
+                group.scale.set(1, 1, 1);
+                group.rotation.y += (handRotY - group.rotation.y) * 0.05;
             } else {
                 group.scale.set(1, 1, 1);
                 group.rotation.y += (handRotY - group.rotation.y) * 0.05;
@@ -512,16 +689,8 @@
             // Quay trái tim
             if (state === 'HEART') {
                 heartRotation += 0.01;
-                // ❤️ Hiện chữ I LOVE YOU trong tim
-                loveTextMesh.visible = true;
-
-                // Nhịp đập nhẹ
-                const pulse = 1 + Math.sin(time * 3) * 0.05;
-                loveTextMesh.scale.set(pulse, pulse, 1);
-
-                // Giữ chữ luôn quay về camera
-                loveTextMesh.lookAt(camera.position);
-
+                // ❤️ Ẩn chữ I LOVE YOU trong tim
+                if (loveTextMesh) loveTextMesh.visible = false;
             }
 
             
@@ -533,54 +702,37 @@
 
             if (state === 'TREE') {
                 if (loveTextMesh) loveTextMesh.visible = false;
+                if (testTextMesh) testTextMesh.visible = false;
 
-                titleMesh.visible = true; starMesh.visible = true;
-                titleMesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+                titleMesh.visible = false; starMesh.visible = true;
                 starMesh.rotation.z -= 0.02;
                 photoMeshes.forEach(m => { m.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1); m.visible = false; });
 
             } else if (state === 'HEART') {
                 titleMesh.visible = false; starMesh.visible = false;
+                if (testTextMesh) testTextMesh.visible = false;
                 photoMeshes.forEach(m => { m.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1); m.visible = false; });
 
             } else if (state === 'EXPLODE') {
                 titleMesh.visible = false; starMesh.visible = false;
-
-                const baseAngle = groupGold.rotation.y;
-                const angleStep = (Math.PI * 2) / 5;
-                let bestIdx = 0; let maxZ = -999;
-
-                photoMeshes.forEach((mesh, i) => {
-                    mesh.visible = true;
-                    const angle = baseAngle + i * angleStep;
-                    const x = Math.sin(angle) * CONFIG.photoOrbitRadius;
-                    const z = Math.cos(angle) * CONFIG.photoOrbitRadius;
-                    const y = Math.sin(time + i) * 3;
-
-                    mesh.position.lerp(new THREE.Vector3(x, y, z), 0.1);
-                    mesh.lookAt(camera.position);
-
-                    if (z > maxZ) { maxZ = z; bestIdx = i; }
-
-                    if (z > 5) {
-                        const distScale = 1.0 + (z / CONFIG.photoOrbitRadius) * 0.8;
-                        mesh.scale.lerp(new THREE.Vector3(distScale, distScale, distScale), 0.1);
-                    } else {
-                        mesh.scale.lerp(new THREE.Vector3(0.6, 0.6, 0.6), 0.1);
-                    }
+                
+                // Ẩn tất cả ảnh và text mesh
+                photoMeshes.forEach(m => { 
+                    m.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1); 
+                    m.visible = false; 
                 });
-                selectedIndex = bestIdx;
+                if (testTextMesh) testTextMesh.visible = false;
+                
+                // Particles sẽ tự động sắp xếp thành chữ thông qua pExplodeTargets
 
             } else if (state === 'PHOTO') {
-                photoMeshes.forEach((mesh, i) => {
-                    if (i === selectedIndex) {
-                        mesh.position.lerp(new THREE.Vector3(0, 0, 60), 0.1);
-                        mesh.scale.lerp(new THREE.Vector3(5, 5, 5), 0.1);
-                        mesh.lookAt(camera.position);
-                        mesh.rotation.z = 0;
-                    } else {
-                        mesh.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1);
-                    }
+                // Khi dấu OK, chuyển sang HEART (không có I LOVE YOU)
+                state = 'HEART';
+                // Ẩn text và ảnh
+                if (testTextMesh) testTextMesh.visible = false;
+                photoMeshes.forEach(m => { 
+                    m.scale.lerp(new THREE.Vector3(0, 0, 0), 0.1); 
+                    m.visible = false; 
                 });
             }
 
@@ -597,71 +749,144 @@
 
             const video = document.getElementsByClassName('input_video')[0];
             const canvas = document.getElementById('camera-preview');
+            canvas.width = 160;
+            canvas.height = 120;
             const ctx = canvas.getContext('2d');
-            const statusDiv = document.getElementById('status');
 
             let frameCnt = 0;
             const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
             hands.setOptions({ maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
             hands.onResults(results => {
-                ctx.clearRect(0, 0, 100, 75); ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-
-                // Kiểm tra 2 tay làm trái tim
-                if (results.multiHandLandmarks.length === 2) {
-                    const hand1 = results.multiHandLandmarks[0];
-                    const hand2 = results.multiHandLandmarks[1];
-
-                    // Lấy đầu ngón cái và ngón trỏ của 2 tay
-                    const thumb1 = hand1[4];
-                    const index1 = hand1[8];
-                    const thumb2 = hand2[4];
-                    const index2 = hand2[8];
-
-                    // Tính khoảng cách giữa các ngón
-                    const thumbDist = Math.hypot(thumb1.x - thumb2.x, thumb1.y - thumb2.y);
-                    const indexDist = Math.hypot(index1.x - index2.x, index1.y - index2.y);
-
-                    // Kiểm tra vị trí tạo thành hình trái tim
-                    const avgY1 = (thumb1.y + index1.y) / 2;
-                    const avgY2 = (thumb2.y + index2.y) / 2;
-                    const thumbsClose = thumbDist < 0.08;
-                    const indexesApart = indexDist > 0.15;
-                    const sameHeight = Math.abs(avgY1 - avgY2) < 0.1;
-
-                    if (thumbsClose && indexesApart && sameHeight) {
-                        state = 'HEART';
-                        statusDiv.innerText = "🤲 2 Tay Ghép Trái Tim";
-                        statusDiv.style.color = "#FF69B4";
-                        return;
-                    }
-                }
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
                 if (results.multiHandLandmarks.length > 0) {
                     const lm = results.multiHandLandmarks[0];
                     handX = lm[9].x;
-
-                    const tips = [8, 12, 16, 20];
+                    
+                    // Vẽ các vector và landmarks
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.fillStyle = '#00FF00';
+                    
+                    // Vẽ các điểm landmark
+                    for (let i = 0; i < lm.length; i++) {
+                        const x = lm[i].x * canvas.width;
+                        const y = lm[i].y * canvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Vẽ các đường nối quan trọng
+                    ctx.strokeStyle = '#FF00FF';
+                    ctx.lineWidth = 1;
+                    
+                    // Ngón trỏ
+                    if (lm[8] && lm[6]) {
+                        ctx.beginPath();
+                        ctx.moveTo(lm[8].x * canvas.width, lm[8].y * canvas.height);
+                        ctx.lineTo(lm[6].x * canvas.width, lm[6].y * canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Ngón giữa
+                    if (lm[12] && lm[10]) {
+                        ctx.beginPath();
+                        ctx.moveTo(lm[12].x * canvas.width, lm[12].y * canvas.height);
+                        ctx.lineTo(lm[10].x * canvas.width, lm[10].y * canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Ngón áp út
+                    if (lm[16] && lm[14]) {
+                        ctx.beginPath();
+                        ctx.moveTo(lm[16].x * canvas.width, lm[16].y * canvas.height);
+                        ctx.lineTo(lm[14].x * canvas.width, lm[14].y * canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Ngón út
+                    if (lm[20] && lm[18]) {
+                        ctx.beginPath();
+                        ctx.moveTo(lm[20].x * canvas.width, lm[20].y * canvas.height);
+                        ctx.lineTo(lm[18].x * canvas.width, lm[18].y * canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Ngón cái
+                    if (lm[4] && lm[3]) {
+                        ctx.beginPath();
+                        ctx.moveTo(lm[4].x * canvas.width, lm[4].y * canvas.height);
+                        ctx.lineTo(lm[3].x * canvas.width, lm[3].y * canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Vẽ vector từ cổ tay đến các ngón
+                    ctx.strokeStyle = '#00FFFF';
+                    ctx.lineWidth = 1;
                     const wrist = lm[0];
-                    let openDist = 0;
-                    tips.forEach(i => openDist += Math.hypot(lm[i].x - wrist.x, lm[i].y - wrist.y));
-                    const avgDist = openDist / 4;
-                    const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+                    const tips = [4, 8, 12, 16, 20];
+                    tips.forEach(tipIndex => {
+                        if (lm[tipIndex]) {
+                            ctx.beginPath();
+                            ctx.moveTo(wrist.x * canvas.width, wrist.y * canvas.height);
+                            ctx.lineTo(lm[tipIndex].x * canvas.width, lm[tipIndex].y * canvas.height);
+                            ctx.stroke();
+                        }
+                    });
 
-                    if (avgDist < 0.25) {
-                        state = 'TREE';
-                        statusDiv.innerText = "✊ Thu Cây Thông"; statusDiv.style.color = "#FFD700";
-                    } else if (pinchDist < 0.05) {
-                        state = 'PHOTO';
-                        statusDiv.innerText = "👌 Xem Ảnh"; statusDiv.style.color = "#00FFFF";
-                    } else {
+                    // Lấy các điểm landmark
+                    const indexTip = lm[8];      // Đầu ngón trỏ
+                    const middleTip = lm[12];    // Đầu ngón giữa
+                    const ringTip = lm[16];      // Đầu ngón áp út
+                    const pinkyTip = lm[20];     // Đầu ngón út
+                    const thumbTip = lm[4];       // Đầu ngón cái
+                    
+                    const indexPIP = lm[6];       // Khớp PIP ngón trỏ
+                    const middlePIP = lm[10];     // Khớp PIP ngón giữa
+                    const ringPIP = lm[14];      // Khớp PIP ngón áp út
+                    const pinkyPIP = lm[18];      // Khớp PIP ngón út
+                    const thumbIP = lm[3];        // Khớp IP ngón cái
+                    
+                    // Kiểm tra các ngón duỗi (tip cao hơn PIP/IP)
+                    const indexExtended = indexTip.y < indexPIP.y;
+                    const middleExtended = middleTip.y < middlePIP.y;
+                    const ringExtended = ringTip.y < ringPIP.y;
+                    const pinkyExtended = pinkyTip.y < pinkyPIP.y;
+                    const thumbExtended = thumbTip.y < thumbIP.y;
+                    
+                    // Đếm số ngón duỗi (không tính ngón cái)
+                    let extendedCount = 0;
+                    if (indexExtended) extendedCount++;
+                    if (middleExtended) extendedCount++;
+                    if (ringExtended) extendedCount++;
+                    if (pinkyExtended) extendedCount++;
+                    
+                    // Kiểm tra xòe cả 5 ngón (bao gồm ngón cái)
+                    const allFiveFingersExtended = indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended;
+                    
+                    // Logic điều khiển mới
+                    if (allFiveFingersExtended) {
+                        // Xòe cả 5 ngón → Mở cây thông (particles random)
+                        isShowingText = false;
                         state = 'EXPLODE';
-                        statusDiv.innerText = "🖐 Bung Quà & Ảnh"; statusDiv.style.color = "#FFA500";
+                    } else if (extendedCount === 2 && indexExtended && middleExtended) {
+                        // Giơ 2 ngón (trỏ + giữa) → Hiển thị chữ
+                        isShowingText = true;
+                        state = 'EXPLODE';
+                    } else if (extendedCount === 3 && indexExtended && middleExtended && ringExtended) {
+                        // Giơ 3 ngón (trỏ + giữa + áp út) → Trái tim
+                        isShowingText = false;
+                        state = 'HEART';
+                    } else {
+                        // Còn lại: Đóng cây thông
+                        isShowingText = false;
+                        state = 'TREE';
                     }
                 } else {
                     state = 'TREE';
-                    statusDiv.innerText = "🎄 Giang Sinh An Lanh 🎄"; statusDiv.style.color = "#FFF";
                 }
             });
 
@@ -676,6 +901,8 @@
 
         window.addEventListener('resize', () => {
             if (camera) { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+            // Regenerate text points khi thay đổi kích thước màn hình
+            textPoints = [];
         });
         function logError(e) { document.getElementById('error-log').style.display = 'block'; document.getElementById('error-log').innerText += e + "\n"; }
     </script>
