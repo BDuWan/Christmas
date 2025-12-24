@@ -139,9 +139,79 @@
         // ==========================================
         // 1. RESOURCES CONFIG
         // ==========================================
-        const MUSIC_URL = "./audio.mp3";
-        let bgMusic = new Audio(MUSIC_URL);
-        bgMusic.loop = true; bgMusic.volume = 1.0;
+        const MUSIC_FILES = [
+            './music/song1.mp3',
+            './music/song2.mp3',
+            './music/song3.mp3'
+        ];
+        
+        let currentMusicIndex = 0;
+        let bgMusic = null;
+        let isChangingSong = false;
+        
+        function initMusic() {
+            bgMusic = new Audio(MUSIC_FILES[currentMusicIndex]);
+            bgMusic.loop = false;
+            bgMusic.volume = 1.0;
+            
+            bgMusic.addEventListener('ended', () => {
+                if (!isChangingSong) {
+                    playNextSong();
+                }
+            });
+        }
+        
+        function playNextSong() {
+            if (isChangingSong) return;
+            
+            isChangingSong = true;
+            currentMusicIndex = (currentMusicIndex + 1) % MUSIC_FILES.length;
+            
+            // Fade out bài cũ
+            const fadeOutInterval = setInterval(() => {
+                if (bgMusic && bgMusic.volume > 0) {
+                    bgMusic.volume = Math.max(0, bgMusic.volume - 0.1);
+                } else {
+                    clearInterval(fadeOutInterval);
+                    if (bgMusic) {
+                        bgMusic.pause();
+                        bgMusic.currentTime = 0;
+                    }
+                    
+                    // Đợi 1 giây trước khi phát bài mới
+                    setTimeout(() => {
+                        bgMusic = new Audio(MUSIC_FILES[currentMusicIndex]);
+                        bgMusic.loop = false;
+                        bgMusic.volume = 0;
+                        
+                        bgMusic.addEventListener('ended', () => {
+                            if (!isChangingSong) {
+                                playNextSong();
+                            }
+                        });
+                        
+                        bgMusic.play().catch(e => console.log(e));
+                        
+                        // Fade in bài mới
+                        const fadeInInterval = setInterval(() => {
+                            if (bgMusic && bgMusic.volume < 1.0) {
+                                bgMusic.volume = Math.min(1.0, bgMusic.volume + 0.1);
+                            } else {
+                                clearInterval(fadeInInterval);
+                                isChangingSong = false;
+                            }
+                        }, 50);
+                    }, 1000);
+                }
+            }, 100);
+        }
+        
+        // Xử lý double click để đổi bài
+        let lastClickTime = 0;
+        document.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            playNextSong();
+        });
 
         const loader = new THREE.TextureLoader();
         const photoFiles = ['./img/a1.jpg', './img/a2.jpg', './img/a3.jpg', './img/a4.jpg']; //Thay hoặc thêm số ảnh dòng 319 sửa ở đây và folder img
@@ -519,7 +589,10 @@
 
         function startSystem() {
             document.getElementById('btnStart').style.display = 'none';
-            bgMusic.play().catch(e => console.log(e));
+            initMusic();
+            if (bgMusic) {
+                bgMusic.play().catch(e => console.log(e));
+            }
             init3D();
 
             const video = document.getElementsByClassName('input_video')[0];
